@@ -1,115 +1,23 @@
 {
-    "add_bos_token": false,
-    "add_eos_token": false,
-    "added_tokens_decoder": {
-        "0": {
-            "content": "</s>",
-            "lstrip": false,
-            "normalized": false,
-            "rstrip": false,
-            "single_word": false,
-            "special": true
-        },
-        "1": {
-            "content": "<pad>",
-            "lstrip": false,
-            "normalized": false,
-            "rstrip": false,
-            "single_word": false,
-            "special": true
-        },
-        "2": {
-            "content": "<unk>",
-            "lstrip": false,
-            "normalized": false,
-            "rstrip": false,
-            "single_word": false,
-            "special": true
-        },
-        "3": {
-            "content": "<user>",
-            "lstrip": false,
-            "normalized": false,
-            "rstrip": false,
-            "single_word": false,
-            "special": true
-        },
-        "4": {
-            "content": "<assistant>",
-            "lstrip": false,
-            "normalized": false,
-            "rstrip": false,
-            "single_word": false,
-            "special": true
-        },
-        "5": {
-            "content": "<think>",
-            "lstrip": false,
-            "normalized": false,
-            "rstrip": false,
-            "single_word": false,
-            "special": true
-        },
-        "6": {
-            "content": "</think>",
-            "lstrip": false,
-            "normalized": false,
-            "rstrip": false,
-            "single_word": false,
-            "special": true
-        },
-        "7": {
-            "content": "<answer>",
-            "lstrip": false,
-            "normalized": false,
-            "rstrip": false,
-            "single_word": false,
-            "special": true
-        },
-        "8": {
-            "content": "</answer>",
-            "lstrip": false,
-            "normalized": false,
-            "rstrip": false,
-            "single_word": false,
-            "special": true
-        },
-        "9": {
-            "content": "<system>",
-            "lstrip": false,
-            "normalized": false,
-            "rstrip": false,
-            "single_word": false,
-            "special": true
-        },
-        "10": {
-            "content": "<image>",
-            "lstrip": false,
-            "normalized": false,
-            "rstrip": false,
-            "single_word": false,
-            "special": true
-        },
-        "11": {
-            "content": "<tool>",
-            "lstrip": false,
-            "normalized": false,
-            "rstrip": false,
-            "single_word": false,
-            "special": true
-        },
-        "12": {
-            "content": "</tool>",
-            "lstrip": false,
-            "normalized": false,
-            "rstrip": false,
-            "single_word": false,
-            "special": true
-        }
-    },
-    "clean_up_tokenization_spaces": false,
-    "eos_token": "</s>",
-    "pad_token": "<pad>",
-    "unk_token": "<unk>",
-    "tokenizer_class": "PreTrainedTokenizerFast"
+  "backend": "tokenizers",
+  "bos_token": "<s>",
+  "clean_up_tokenization_spaces": false,
+  "eos_token": "</s>",
+  "extra_special_tokens": [
+    "<system>",
+    "<assistant>",
+    "<user>",
+    "<think>",
+    "</think>",
+    "<answer>",
+    "</answer>",
+    "<image>",
+    "<tool>",
+    "</tool>"
+  ],
+  "model_max_length": 1000000000000000019884624838656,
+  "pad_token": "<pad>",
+  "padding_side": "left",
+  "tokenizer_class": "TokenizersBackend",
+  "unk_token": "<unk>"
 }

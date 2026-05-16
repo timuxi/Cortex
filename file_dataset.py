@@ -20,7 +20,7 @@ class FileDatasetBase(FileDataset):
         if not os.path.exists(file_path):
             if TrainerTools().parallel.is_main_process:
                 dataset_snapshot_download(
-                    'qibin0506/Cortex-3.0-data',
+                    'qibin0506/Cortex-3.1-train-data',
                     allow_file_pattern=[self.file_names[idx]],
                     local_dir=data_root_dir()
                 )
@@ -35,7 +35,7 @@ class FileDatasetBase(FileDataset):
                 threading.Thread(
                     target=dataset_snapshot_download,
                     kwargs={
-                        'dataset_id': 'qibin0506/Cortex-3.0-data',
+                        'dataset_id': 'qibin0506/Cortex-3.1-train-data',
                         'allow_file_pattern': [next_file],
                         'local_dir': data_root_dir()
                     }
@@ -52,26 +52,29 @@ class FileDatasetBase(FileDataset):
 
 class PretrainFileDataset(FileDatasetBase):
     def __init__(self):
-        super().__init__([
-            'pretrain_data_0.npy',
-            'pretrain_data_1.npy',
-        ])
+        super().__init__(['pretrain.npy'])
 
 
 class MidtrainFileDataset(FileDatasetBase):
     def __init__(self):
-        super().__init__([
-            'midtrain_data_0.npy',
-        ])
+        super().__init__(['midtrain.npy'])
 
 
 class SFTFileDataset(FileDatasetBase):
     def __init__(self):
-        super().__init__([
-            'sft_data.npy',
-        ])
+        super().__init__([ 'sft.npy'])
 
 
 class PPOFileDataset(FileDatasetBase):
     def __init__(self):
-        super().__init__(['ppo_data.npy'])
+        super().__init__(['rlhf.npy'])
+
+
+class DPOFileDataset(FileDatasetBase):
+    def __init__(self):
+        super().__init__(['dpo.npy'])
+
+
+class GRPOFileDataset(FileDatasetBase):
+    def __init__(self):
+        super().__init__(['rlhf.npy'])

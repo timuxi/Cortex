@@ -9,8 +9,9 @@ pyarrow
 nvitop
 pandas
 scikit-learn
-project_llm_model==0.9.0
-project_llm_trainer==0.14.4
+project_llm_model==0.9.11
+project_llm_trainer==0.17.3
+plotly
 bottle
 paste
 # waitress

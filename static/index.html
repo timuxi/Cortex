@@ -3,552 +3,242 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cortex - AI 聊天</title>
-
-    <script src="/static/tailwind.js"></script>
-
-    <!-- KaTeX -->
-    <link rel="stylesheet" href="https://lib.baomitu.com/KaTeX/0.16.9/katex.min.css">
-    <script defer src="https://lib.baomitu.com/KaTeX/0.16.9/katex.min.js"></script>
-    <script defer src="https://lib.baomitu.com/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
-
-    <!-- Marked.js -->
-    <script defer src="https://lib.baomitu.com/marked/12.0.1/marked.min.js"></script>
-
-    <!-- highlight.js -->
-    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/atom-one-dark.min.css">
-    <script defer src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
-
+    <title>Cortex</title>
+    <script src="https://cdn.staticfile.net/marked/12.0.2/marked.min.js"></script>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif;
-            line-height: 1.6;
+        :root {
+            --bg-color: #131314; --text-color: #e3e3e3; --input-bg: #1e1f20;
+            --border-color: #444746; --btn-hover: #333537;
+            --think-bg: #1a1a1c; --think-border: #333;
         }
-        .prose {
-            line-height: 1.75;
-        }
-        .prose > :first-child { margin-top: 0; }
-        .prose > :last-child { margin-bottom: 0; }
-
-        /* --- 其他自定义样式 --- */
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #1e1f20; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #4a4a4a; border-radius: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #5a5a5a; }
-        .autoresize-textarea { resize: none; overflow-y: hidden; }
-
-        summary::-webkit-details-marker { display: none; }
-        summary { list-style: none; }
-
-        .typing-indicator span {
-            display: inline-block; width: 8px; height: 8px; border-radius: 50%;
-            background-color: #9ca3af; animation: typing 1.4s infinite ease-in-out both;
-        }
-        .typing-indicator span:nth-child(1) { animation-delay: 0s; }
-        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes typing {
-            0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); }
-        }
-        .katex-error { color: #ef4444; }
-        .prose :where(pre) {
-            background-color: #1e1f20 !important; border: 1px solid #374151;
-            border-radius: 0.5rem; padding: 1em;
-        }
-        .prose :where(code):not(:where([class~="not-prose"] *))::before,
-        .prose :where(code):not(:where([class~="not-prose"] *))::after { content: ""; }
-        .hljs { color: #abb2bf; }
-
-        /* --- 参数面板过渡效果 --- */
-        #settings-panel.hidden {
-            opacity: 0;
-            transform: translateY(10px);
-            pointer-events: none;
-        }
-        #settings-panel {
-            transition: opacity 0.2s ease-out, transform 0.2s ease-out;
-        }
-        /* --- 移除数字输入框的箭头 --- */
-        input[type=number]::-webkit-inner-spin-button,
-        input[type=number]::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        input[type=number] {
-            -moz-appearance: textfield;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, sans-serif; background-color: var(--bg-color); color: var(--text-color); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; }
+        .header-left .title { font-size: 22px; font-weight: 600; }
+        .header-left .subtitle { font-size: 12px; color: #888; margin-top: 4px; }
+        .header-right a { color: var(--text-color); }
+        .header-right svg { width: 28px; height: 28px; fill: currentColor; }
+        main { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .chat-container { width: 100%; max-width: 800px; display: flex; flex-direction: column; gap: 24px; padding-bottom: 40px; }
+        .message { display: flex; gap: 16px; align-items: flex-start; }
+        .message.user { flex-direction: row-reverse; }
+        .avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; justify-content: center; align-items: center; flex-shrink: 0; font-size: 20px; }
+        .message.bot .avatar { background: #6b4c9a; color: #fff; }
+        .message.user .avatar { background: #444; color: #fff; }
+        .content { font-size: 15px; line-height: 1.6; max-width: 85%; word-wrap: break-word; }
+        .message.user .content { background: var(--input-bg); padding: 12px 18px; border-radius: 20px; }
+        .think-block { background: var(--think-bg); border-left: 3px solid #6b4c9a; padding: 12px; margin-bottom: 12px; border-radius: 4px; color: #aaa; font-size: 14px; }
+        .think-block summary { cursor: pointer; user-select: none; font-weight: 500; color: #ccc;}
+        .think-block summary:hover { color: #fff; }
+        footer { padding: 10px 20px 20px; display: flex; flex-direction: column; align-items: center; background: linear-gradient(180deg, rgba(19,19,20,0) 0%, rgba(19,19,20,1) 30%); }
+        .input-wrapper { width: 100%; max-width: 800px; background-color: var(--input-bg); border: 1px solid var(--border-color); border-radius: 24px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; transition: 0.2s; }
+        .input-wrapper:focus-within { background-color: #282a2c; }
+        textarea { width: 100%; background: transparent; border: none; color: var(--text-color); font-size: 16px; font-family: inherit; resize: none; outline: none; min-height: 24px; max-height: 200px; overflow-y: auto; line-height: 1.5; }
+        .bottom-controls { display: flex; justify-content: space-between; align-items: center; }
+        .left-controls { display: flex; gap: 8px; }
+        .control-btn { background: transparent; border: none; color: #aaa; font-size: 13px; font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 16px; transition: 0.2s; }
+        .control-btn:hover { background: var(--btn-hover); color: #fff; }
+        .control-btn.think-btn.active { color: #bca0ff; background: rgba(188, 160, 255, 0.1); }
+        .send-btn { background: #fff; color: #000; border: none; border-radius: 50%; width: 36px; height: 36px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; }
+        .send-btn:hover { opacity: 0.8; }
+        .send-btn:disabled { background: #555; cursor: not-allowed; }
+        .send-btn svg { width: 18px; height: 18px; fill: currentColor; }
+        .footer-text { font-size: 12px; color: #777; margin-top: 12px; text-align: center; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 100; }
+        .modal { background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; width: 320px; }
+        .modal h3 { margin-bottom: 16px; font-size: 18px; }
+        .setting-group { margin-bottom: 16px; }
+        .setting-group label { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px; color: #ccc;}
+        .setting-group input[type="range"] { width: 100%; accent-color: #bca0ff; }
+        .modal-footer { display: flex; justify-content: flex-end; margin-top: 24px; }
+        .btn-primary { background: #e3e3e3; color: #000; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 500; }
     </style>
 </head>
-<body class="bg-[#131314] text-gray-200">
-    <div class="flex h-screen w-full">
-        <main class="flex flex-col flex-1 h-screen">
-            <!-- 顶部标题栏 -->
-            <header class="p-4 md:px-6 md:py-4 border-b border-gray-700/50">
-                <div class="max-w-4xl mx-auto flex justify-between items-center">
-                    <div>
-                        <h1 class="text-xl font-bold text-white">Cortex</h1>
-                        <p class="text-xs text-gray-400 mt-1">Model: Cortex 3.0 GV: {{__GENERATE_COUNT__}}/{{__VISITOR_COUNT__}}</p>
-                    </div>
-                    <a href="https://github.com/qibin0506/Cortex" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-white transition-colors duration-200" title="View on GitHub">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.91 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-                    </a>
-                </div>
-            </header>
+<body>
+    <header>
+        <div class="header-left">
+            <div class="title">Cortex</div>
+            <div class="subtitle">Model: Cortex 3.0 GV: 42/60</div>
+        </div>
+        <div class="header-right">
+            <a href="https://github.com/qibin0506/Cortex" target="_blank">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+            </a>
+        </div>
+    </header>
 
-            <!-- 聊天记录区域 -->
-            <div id="chat-container" class="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
-                <div class="max-w-4xl mx-auto w-full">
-                    <!-- 欢迎消息 -->
-                    <div class="flex items-start gap-4 my-8" data-role="assistant">
-                         <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white flex-shrink-0">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
-                        </div>
-                        <div data-content="你好！我是AI助手。你今天想聊些什么？" class="bg-[#1e1f20] p-4 rounded-xl rounded-tl-none prose prose-invert max-w-none">
-                            <p>你好！我是AI助手。你今天想聊些什么？</p>
-                        </div>
-                    </div>
-                </div>
+    <main id="chat-container">
+        <div class="chat-container" id="chat-box">
+            <div class="message bot">
+                <div class="avatar">🤖</div>
+                <div class="content">你好！我是Cortex。我们开始聊天吧！</div>
             </div>
+        </div>
+    </main>
 
-            <!-- 输入区域 -->
-            <div class="p-4 md:p-6 bg-[#131314] border-t border-gray-700/50">
-                <div class="max-w-4xl mx-auto relative">
-                    <!-- MODIFIED: 参数设置面板 (垂直布局) -->
-                    <div id="settings-panel" class="hidden absolute bottom-full left-0 mb-3 bg-[#1e1f20] border border-gray-600 rounded-lg p-4 shadow-lg w-full max-w-sm">
-                        <div class="flex flex-col">
-                            <!-- Temperature Slider -->
-                            <div class="space-y-2">
-                                <div class="flex justify-between items-center">
-                                    <div class="flex items-center gap-1.5">
-                                        <label for="temperature-slider" class="text-sm font-medium text-gray-300">Temperature</label>
-                                        <div class="group relative flex items-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500 cursor-help"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-                                            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 rounded-lg bg-gray-800 border border-gray-600 p-3 text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
-                                                <p class="font-bold mb-1">温度</p>
-                                                较高的值（如 1.2）会使输出更随机、更有创意，而较低的值（如 0.1）会使其更具确定性和专注性。
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <input type="number" id="temperature-input" min="0" max="2" step="0.05" class="w-20 text-center text-sm font-mono bg-[#131314] border border-gray-500 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 p-1">
-                                </div>
-                                <input id="temperature-slider" type="range" min="0" max="2" value="1.0" step="0.05" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
-                            </div>
-                            <!-- Top_p Slider -->
-                            <div class="space-y-2 pt-4 mt-4 border-t border-gray-700/50">
-                                <div class="flex justify-between items-center">
-                                     <div class="flex items-center gap-1.5">
-                                        <label for="top-p-slider" class="text-sm font-medium text-gray-300">Top P</label>
-                                        <div class="group relative flex items-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500 cursor-help"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-                                            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 rounded-lg bg-gray-800 border border-gray-600 p-3 text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
-                                                <p class="font-bold mb-1">核采样</p>
-                                                较高的值（如 0.9）会考虑更多词汇选择，使输出更多样、更丰富；而较低的值（如 0.2）会筛选掉大部分选项，使输出更保守、更可预测。
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <input type="number" id="top-p-input" min="0" max="1" step="0.05" class="w-20 text-center text-sm font-mono bg-[#131314] border border-gray-500 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 p-1">
-                                </div>
-                                <input id="top-p-slider" type="range" min="0" max="1" value="0.95" step="0.05" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
-                            </div>
-                            <!-- Thinking Budget -->
-                            <div class="space-y-3 pt-4 mt-4 border-t border-gray-700/50" style="display:none">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-1.5">
-                                        <label for="thinking-budget-toggle" class="text-sm font-medium text-gray-300">思考预算</label>
-                                        <div class="group relative flex items-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500 cursor-help"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-                                            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 rounded-lg bg-gray-800 border border-gray-600 p-3 text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
-                                                <p class="font-bold mb-1">思考预算</p>
-                                                开启后，可以为模型的思考过程设定一个计算量上限（单位：token），有助于控制响应时间和成本。
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <label for="thinking-budget-toggle" class="relative inline-flex items-center cursor-pointer">
-                                      <input type="checkbox" id="thinking-budget-toggle" class="sr-only peer">
-                                      <div class="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-blue-500/50 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                    </label>
-                                </div>
-                                <div id="thinking-budget-slider-container" class="hidden space-y-2">
-                                    <div class="flex justify-between items-center">
-                                         <label for="thinking-budget-slider" class="text-xs text-gray-400">设置预算值</label>
-                                         <input type="number" id="thinking-budget-input" min="128" max="1024" step="1" class="w-20 text-center text-sm font-mono bg-[#131314] border border-gray-500 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 p-1">
-                                    </div>
-                                    <input id="thinking-budget-slider" type="range" min="128" max="1024" value="512" step="1" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <form id="chat-form" class="relative">
-                        <div class="bg-[#1e1f20] rounded-2xl border border-gray-600 focus-within:border-blue-500 transition-colors duration-200 flex flex-col">
-                            <div class="flex items-end p-2 pb-1">
-                                <textarea id="message-input" class="autoresize-textarea flex-1 bg-transparent text-gray-200 placeholder-gray-500 focus:outline-none px-1" placeholder="在这里输入消息..." rows="1"></textarea>
-                            </div>
-                            <div class="flex items-center justify-between pt-2 pb-1 px-3 border-t border-gray-700/50">
-                                <div class="flex items-center space-x-2">
-                                    <button type="button" id="thinking-mode-btn" title="思考模式 (已开启)" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-gray-300 hover:bg-gray-700 transition-colors duration-200" style="display:none">
-                                        <svg id="think-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400"><path d="M15.06 9.38a6 6 0 0 1 8.09 5.12c0 3.31-2.69 6-6 6h-1.17a2 2 0 0 0-1.79 1.11L12 22a2 2 0 0 1-1.79-1.11h0a2 2 0 0 0-1.79-1.11H6c-3.31 0-6-2.69-6-6a6 6 0 0 1 5.4-5.92 6 6 0 0 1 8.49-3.7Z"></path><path d="M12 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"></path></svg>
-                                        <span class="text-xs">思考模式</span>
-                                    </button>
-                                    <button type="button" id="deep-search-btn" title="深度搜索 (已关闭)" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-gray-300 hover:bg-gray-700 transition-colors duration-200" style="display:none">
-                                        <svg id="search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                                        <span class="text-xs">深度搜索</span>
-                                    </button>
-                                    <button type="button" id="settings-btn" title="参数设置" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-gray-300 hover:bg-gray-700 transition-colors duration-200">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sliders-horizontal"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>
-                                        <span class="text-xs">参数</span>
-                                    </button>
-                                </div>
-                                <button id="send-btn" type="submit" class="p-2 rounded-full bg-blue-600 hover:bg-blue-700 transition-colors duration-200 disabled:bg-gray-600 disabled:cursor-not-allowed flex-shrink-0" disabled>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                    <p class="text-xs text-gray-500 text-center mt-3 px-4">AI可能会犯错。请核查重要信息。</p>
+    <footer>
+        <div class="input-wrapper">
+            <textarea id="user-input" rows="1" placeholder="在这里输入消息..."></textarea>
+            <div class="bottom-controls">
+                <div class="left-controls">
+                    <button class="control-btn think-btn active" id="btn-think">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>深度思考
+                    </button>
+                    <button class="control-btn" id="btn-params">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>参数
+                    </button>
                 </div>
+                <button class="send-btn" id="btn-send"><svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg></button>
             </div>
-        </main>
+        </div>
+        <div class="footer-text">AI可能会犯错。请核查重要信息。</div>
+    </footer>
+
+    <div class="modal-overlay" id="params-modal">
+        <div class="modal">
+            <h3>模型参数设置</h3>
+            <div class="setting-group"><label><span>Temperature</span> <span id="val-temp">0.7</span></label><input type="range" id="input-temp" min="0" max="2" step="0.1" value="0.7"></div>
+            <div class="setting-group"><label><span>Top P</span> <span id="val-topp">0.9</span></label><input type="range" id="input-topp" min="0" max="1" step="0.05" value="0.9"></div>
+            <div class="setting-group"><label><span>Top K</span> <span id="val-topk">40</span></label><input type="range" id="input-topk" min="1" max="100" step="1" value="40"></div>
+            <div class="modal-footer"><button class="btn-primary" id="btn-close-modal">完成</button></div>
+        </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- 元素引用 ---
-            const chatForm = document.getElementById('chat-form');
-            const messageInput = document.getElementById('message-input');
-            const sendBtn = document.getElementById('send-btn');
-            const chatContainer = document.getElementById('chat-container').querySelector('.max-w-4xl');
-            const thinkingModeBtn = document.getElementById('thinking-mode-btn');
-            const thinkIcon = document.getElementById('think-icon');
-            const settingsBtn = document.getElementById('settings-btn');
-            const settingsPanel = document.getElementById('settings-panel');
-            // NEW: 深度搜索元素引用
-            const deepSearchBtn = document.getElementById('deep-search-btn');
-            const searchIcon = document.getElementById('search-icon');
+        let isThink = true;
+        let params = { temperature: 0.7, top_p: 0.9, top_k: 40 };
 
-            const temperatureSlider = document.getElementById('temperature-slider');
-            const temperatureInput = document.getElementById('temperature-input');
-            const topPSlider = document.getElementById('top-p-slider');
-            const topPInput = document.getElementById('top-p-input');
+        let chatHistory = [];
 
-            const thinkingBudgetToggle = document.getElementById('thinking-budget-toggle');
-            const thinkingBudgetContainer = document.getElementById('thinking-budget-slider-container');
-            const thinkingBudgetSlider = document.getElementById('thinking-budget-slider');
-            const thinkingBudgetInput = document.getElementById('thinking-budget-input');
+        const elInput = document.getElementById('user-input');
+        const elBtnSend = document.getElementById('btn-send');
+        const elBtnThink = document.getElementById('btn-think');
+        const elBtnParams = document.getElementById('btn-params');
+        const elChatBox = document.getElementById('chat-box');
+        const elMain = document.getElementById('chat-container');
+        const elModal = document.getElementById('params-modal');
+        const elBtnCloseModal = document.getElementById('btn-close-modal');
+        const [inTemp, inTopP, inTopK] = ['input-temp', 'input-topp', 'input-topk'].map(id => document.getElementById(id));
+        const [valTemp, valTopP, valTopK] = ['val-temp', 'val-topp', 'val-topk'].map(id => document.getElementById(id));
 
-            // --- 状态变量 ---
-            let isThinkingEnabled = false;
-            let isDeepSearchEnabled = false; // NEW: 深度搜索状态，默认为关闭
-            let temperature = parseFloat(temperatureSlider.value);
-            let topP = parseFloat(topPSlider.value);
-            let isThinkingBudgetEnabled = false; // Default off
-            let thinkingBudgetValue = parseInt(thinkingBudgetSlider.value, 512); // Default value
+        elInput.addEventListener('input', function() { this.style.height = '24px'; this.style.height = Math.min(this.scrollHeight, 200) + 'px'; });
+        elInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }});
+        elBtnSend.addEventListener('click', sendMessage);
+        elBtnThink.addEventListener('click', () => { isThink = !isThink; elBtnThink.classList.toggle('active', isThink); });
+        elBtnParams.addEventListener('click', () => elModal.style.display = 'flex');
+        elBtnCloseModal.addEventListener('click', () => elModal.style.display = 'none');
+        elModal.addEventListener('click', (e) => { if (e.target === elModal) elModal.style.display = 'none'; });
+        inTemp.addEventListener('input', (e) => { params.temperature = e.target.value; valTemp.innerText = e.target.value; });
+        inTopP.addEventListener('input', (e) => { params.top_p = e.target.value; valTopP.innerText = e.target.value; });
+        inTopK.addEventListener('input', (e) => { params.top_k = e.target.value; valTopK.innerText = e.target.value; });
 
-            // --- 函数: 初始化参数控制器 ---
-            const initializeParameters = () => {
-                // Set initial values for Temperature & Top P
-                temperatureInput.value = parseFloat(temperatureSlider.value).toFixed(2);
-                topPInput.value = parseFloat(topPSlider.value).toFixed(2);
-                // Set initial values for Thinking Budget
-                thinkingBudgetInput.value = parseInt(thinkingBudgetSlider.value, 10);
-                thinkingBudgetToggle.checked = isThinkingBudgetEnabled;
-                thinkingBudgetContainer.classList.toggle('hidden', !isThinkingBudgetEnabled);
+        async function sendMessage() {
+            const content = elInput.value.trim();
+            if (!content) return;
 
+            const currentIsThink = isThink;
+            appendMessage('user', content);
 
-                // --- 参数事件监听 ---
+            chatHistory.push({ role: 'user', content: content });
 
-                // Temperature sync
-                temperatureSlider.addEventListener('input', (e) => {
-                    const value = parseFloat(e.target.value);
-                    temperature = value;
-                    temperatureInput.value = value.toFixed(2);
-                });
-                temperatureInput.addEventListener('change', (e) => {
-                    let value = parseFloat(e.target.value);
-                    if (isNaN(value)) { value = 1.0; }
-                    const clampedValue = Math.max(0, Math.min(2, value));
-                    temperature = clampedValue;
-                    temperatureInput.value = clampedValue.toFixed(2);
-                    temperatureSlider.value = clampedValue;
+            elInput.value = '';
+            elInput.style.height = '24px';
+            elBtnSend.disabled = true;
+
+            const botMsgContainer = appendMessage('bot', '');
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messages: chatHistory,
+                        is_think: currentIsThink,
+                        temperature: parseFloat(params.temperature),
+                        top_p: parseFloat(params.top_p),
+                        top_k: parseInt(params.top_k)
+                    })
                 });
 
-                // Top P sync
-                topPSlider.addEventListener('input', (e) => {
-                    const value = parseFloat(e.target.value);
-                    topP = value;
-                    topPInput.value = value.toFixed(2);
-                });
-                topPInput.addEventListener('change', (e) => {
-                    let value = parseFloat(e.target.value);
-                    if (isNaN(value)) { value = 0.95; }
-                    const clampedValue = Math.max(0, Math.min(1, value));
-                    topP = clampedValue;
-                    topPInput.value = clampedValue.toFixed(2);
-                    topPSlider.value = clampedValue;
-                });
+                if (!response.ok) throw new Error("网络请求失败");
 
-                // Thinking Budget sync
-                thinkingBudgetToggle.addEventListener('change', (e) => {
-                    isThinkingBudgetEnabled = e.target.checked;
-                    thinkingBudgetContainer.classList.toggle('hidden', !isThinkingBudgetEnabled);
-                });
-                thinkingBudgetSlider.addEventListener('input', (e) => {
-                    const value = parseInt(e.target.value, 10);
-                    thinkingBudgetValue = value;
-                    thinkingBudgetInput.value = value;
-                });
-                thinkingBudgetInput.addEventListener('change', (e) => {
-                    let value = parseInt(e.target.value, 10);
-                    if (isNaN(value)) { value = 256; }
-                    const clampedValue = Math.max(128, Math.min(512, value));
-                    thinkingBudgetValue = clampedValue;
-                    thinkingBudgetInput.value = clampedValue;
-                    thinkingBudgetSlider.value = clampedValue;
-                });
-            };
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let fullText = "";
+                let buffer = "";
 
-            // --- 其他事件监听 ---
-            messageInput.addEventListener('input', () => {
-                updateSendButtonState();
-                adjustTextareaHeight();
-            });
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
 
-            chatForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const messageText = messageInput.value.trim();
-                if (messageText) {
-                    await sendMessage(messageText);
-                }
-            });
+                    buffer += decoder.decode(value, { stream: true });
+                    let boundary = buffer.indexOf('\n\n');
 
-            messageInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    chatForm.dispatchEvent(new Event('submit', { cancelable: true }));
-                }
-            });
+                    while (boundary !== -1) {
+                        let chunkStr = buffer.slice(0, boundary);
+                        buffer = buffer.slice(boundary + 2);
 
-            thinkingModeBtn.addEventListener('click', () => {
-                isThinkingEnabled = !isThinkingEnabled;
-                thinkIcon.classList.toggle('text-blue-400');
-                thinkIcon.classList.toggle('text-gray-400');
-                thinkingModeBtn.title = isThinkingEnabled ? '思考模式 (已开启)' : '思考模式 (已关闭)';
-            });
+                        if (chunkStr.startsWith('data: ')) {
+                            let dataStr = chunkStr.slice(6).trim();
 
-            // NEW: 深度搜索按钮点击事件
-            deepSearchBtn.addEventListener('click', () => {
-                isDeepSearchEnabled = !isDeepSearchEnabled;
-                searchIcon.classList.toggle('text-blue-400');
-                searchIcon.classList.toggle('text-gray-400');
-                deepSearchBtn.title = isDeepSearchEnabled ? '深度搜索 (已开启)' : '深度搜索 (已关闭)';
-            });
-
-            settingsBtn.addEventListener('click', () => {
-                settingsPanel.classList.toggle('hidden');
-            });
-
-
-            // --- 核心函数 ---
-            function updateSendButtonState() {
-                 sendBtn.disabled = messageInput.value.trim() === '';
-            }
-
-            function adjustTextareaHeight() {
-                messageInput.style.height = 'auto';
-                const maxHeight = 200;
-                messageInput.style.height = `${Math.min(messageInput.scrollHeight, maxHeight)}px`;
-                messageInput.style.overflowY = messageInput.scrollHeight > maxHeight ? 'auto' : 'hidden';
-            }
-
-            async function sendMessage(text) {
-                const userHtml = `
-                    <div class="flex items-start gap-4 my-6 justify-end" data-role="user" data-content="${text.replace(/"/g, '&quot;')}">
-                        <div class="bg-blue-600 p-4 rounded-xl rounded-br-none prose prose-invert max-w-none">
-                            ${marked.parse(text)}
-                        </div>
-                        <div class="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center font-bold flex-shrink-0">你</div>
-                    </div>`;
-                chatContainer.insertAdjacentHTML('beforeend', userHtml);
-                scrollToBottom();
-
-                messageInput.value = '';
-                messageInput.dispatchEvent(new Event('input'));
-
-                settingsPanel.classList.add('hidden');
-
-                const chatHistory = constructChatHistoryPayload();
-                await fetchAIResponseWithPost(chatHistory);
-            }
-
-            function constructChatHistoryPayload() {
-                const history = [];
-                const messages = chatContainer.querySelectorAll('[data-role]');
-                messages.forEach(msg => {
-                    const role = msg.dataset.role;
-                    const content = msg.dataset.content;
-                    if (role && content) {
-                         history.push({ role: role, content: content });
-                    }
-                });
-                return history;
-            }
-
-            function renderContent(element, text) {
-                if (!element || typeof marked === 'undefined' || typeof hljs === 'undefined') {
-                    if (element) element.textContent = text;
-                    return;
-                }
-                if (text.includes("{{assistant_name}}")) {
-                    text = text.replace("{{assistant_name}}", "Cortex")
-                }
-                element.innerHTML = marked.parse(text);
-                element.querySelectorAll('pre code').forEach((block) => {
-                    hljs.highlightElement(block);
-                });
-                if (typeof renderMathInElement !== 'undefined') {
-                    renderMathInElement(element, {
-                        delimiters: [
-                            {left: '$$', right: '$$', display: true},
-                            {left: '$', right: '$', display: false},
-                            {left: '\\(', right: '\\)', display: false},
-                            {left: '\\[', right: '\\]', display: true}
-                        ],
-                        throwOnError: false
-                    });
-                }
-            }
-
-            async function fetchAIResponseWithPost(chatHistory) {
-                const messageId = `ai-message-${Date.now()}`;
-                const initialAIHtml = `
-                    <div class="flex items-start gap-4 my-6" data-role="assistant" id="${messageId}">
-                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white flex-shrink-0">
-                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
-                        </div>
-                        <div class="w-full flex flex-col items-start">
-                            <div id="typing-indicator-${messageId}" class="bg-[#1e1f20] p-4 rounded-xl rounded-tl-none">
-                                <div class="typing-indicator"><span></span><span></span><span></span></div>
-                            </div>
-                            <details id="thinking-container-${messageId}" class="w-full mb-2 group" style="display: none;">
-                                <summary class="inline-flex items-center gap-2 text-xs font-medium text-gray-400 hover:text-gray-200 hover:bg-white/5 px-2.5 py-1 rounded-full transition-all cursor-pointer outline-none">
-                                    <span>思考过程</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-300 group-open:rotate-180"><path d="m6 9 6 6 6-6"/></svg>
-                                </summary>
-                                <div class="mt-2 p-3 bg-black/20 rounded-lg">
-                                    <div id="thinking-process-text-${messageId}" class="text-sm text-gray-500 prose prose-invert max-w-none"></div>
-                                </div>
-                            </details>
-                             <div id="final-answer-container-${messageId}" class="w-full bg-[#1e1f20] p-4 rounded-xl rounded-tl-none prose prose-invert max-w-none" style="display: none;">
-                                <div id="final-answer-text-${messageId}"></div>
-                            </div>
-                        </div>
-                    </div>`;
-                chatContainer.insertAdjacentHTML('beforeend', initialAIHtml);
-                scrollToBottom();
-
-                const aiMessageContainer = document.getElementById(messageId);
-                const typingIndicator = document.getElementById(`typing-indicator-${messageId}`);
-                const thinkingContainer = document.getElementById(`thinking-container-${messageId}`);
-                const thinkingTextEl = document.getElementById(`thinking-process-text-${messageId}`);
-                const answerContainer = document.getElementById(`final-answer-container-${messageId}`);
-                const answerTextEl = document.getElementById(`final-answer-text-${messageId}`);
-
-                let firstChunkReceived = false;
-                let thinkingAccumulator = '';
-                let contentAccumulator = '';
-
-                try {
-                    const requestBody = {
-                        history: chatHistory,
-                        thinking: isThinkingEnabled,
-                        temperature: temperature,
-                        top_p: topP,
-                        think_budget_enable: isThinkingBudgetEnabled,
-                        think_budget: thinkingBudgetValue,
-                        deep_search: isDeepSearchEnabled // NEW: 发送深度搜索状态
-                    };
-
-                    const response = await fetch('/api/chat', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(requestBody),
-                    });
-
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-                    const reader = response.body.getReader();
-                    const decoder = new TextDecoder();
-                    let buffer = '';
-
-                    const processStream = async () => {
-                        while (true) {
-                            const { value, done } = await reader.read();
-                            if (done) {
-                                aiMessageContainer.dataset.content = contentAccumulator;
-                                if (thinkingAccumulator.trim().length > 0 && isThinkingEnabled) {
-                                    thinkingContainer.open = true;
+                            if (dataStr === '[DONE]') {
+                                let botTextToSave = fullText;
+                                if (currentIsThink && !botTextToSave.startsWith('<think>')) {
+                                    botTextToSave = '<think>' + botTextToSave;
                                 }
-                                break;
+                                chatHistory.push({ role: 'assistant', content: botTextToSave });
+                                continue;
                             }
-                            buffer += decoder.decode(value, { stream: true });
 
-                            let eomIndex;
-                            while ((eomIndex = buffer.indexOf('\n\n')) >= 0) {
-                                const message = buffer.slice(0, eomIndex);
-                                buffer = buffer.slice(eomIndex + 2);
-                                processSSEMessage(message);
+                            try {
+                                const data = JSON.parse(dataStr);
+                                fullText += data.delta;
+                                renderText(fullText, botMsgContainer, currentIsThink);
+                                elMain.scrollTop = elMain.scrollHeight;
+                            } catch (err) {
+                                console.error("JSON 解析错误", err, dataStr);
                             }
                         }
-                    };
-
-                    await processStream();
-
-                } catch (error) {
-                    console.error("Fetch failed:", error);
-                    typingIndicator?.remove();
-                    answerTextEl.innerHTML = `<span class="text-red-500">抱歉，连接到AI服务器时出错。请检查后端服务是否正在运行以及网络连接。</span>`;
-                    answerContainer.style.display = 'block';
-                }
-
-                function processSSEMessage(message) {
-                    if (!message.startsWith('{')) return;
-                    try {
-                        const parsedMessage = JSON.parse(message);
-                        handleServerEvent(parsedMessage.event, parsedMessage.data);
-                    } catch(e) {
-                         console.error('Error parsing SSE message:', message, e);
+                        boundary = buffer.indexOf('\n\n');
                     }
                 }
+            } catch (err) {
+                renderText("请求出错: " + err.message, botMsgContainer, currentIsThink);
+                chatHistory.pop();
+            } finally {
+                elBtnSend.disabled = false;
+                elInput.focus();
+            }
+        }
 
-                function handleServerEvent(event, data) {
-                    if (!firstChunkReceived) {
-                        firstChunkReceived = true;
-                        typingIndicator?.remove();
-                    }
-                    if (event === 'answer_chunk') {
-                        if (answerContainer.style.display === 'none') {
-                            answerContainer.style.display = 'block';
-                        }
-                        contentAccumulator = data;
-                        renderContent(answerTextEl, contentAccumulator);
-                    } else if (event === 'error') {
-                         console.error("Server error:", data);
-                         answerTextEl.innerHTML = `<span class="text-red-500">服务器返回错误: ${data}</span>`;
-                         answerContainer.style.display = 'block';
-                    }
-                     scrollToBottom();
-                }
+        function appendMessage(role, text) {
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar';
+            avatar.innerText = role === 'bot' ? '🤖' : '👤';
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'content';
+            if (text) renderText(text, contentDiv, false);
+            div.appendChild(avatar);
+            div.appendChild(contentDiv);
+            elChatBox.appendChild(div);
+            elMain.scrollTop = elMain.scrollHeight;
+            return contentDiv;
+        }
+
+        function renderText(text, container, isThinkMode) {
+            let processedText = text;
+            if (isThinkMode && !processedText.startsWith('<think>')) {
+                processedText = '<think>' + processedText;
             }
 
-            function scrollToBottom() {
-                chatContainer.parentElement.scrollTop = chatContainer.parentElement.scrollHeight;
-            }
-
-            // --- 初始化 ---
-            initializeParameters();
-            updateSendButtonState();
-            adjustTextareaHeight();
-        });
+            processedText = processedText.replace(/<think>([\s\S]*?)<\/think>/g, '<details class="think-block" open><summary>思考过程</summary>\n\n$1\n\n</details>');
+            processedText = processedText.replace(/<think>([\s\S]*?)$/g, '<details class="think-block" open><summary>思考中...</summary>\n\n$1\n\n</details>');
+            processedText = processedText.replace(/<\/think>/g, '');
+            processedText = processedText.replace(/<answer>/g, '');
+            container.innerHTML = marked.parse(processedText);
+        }
     </script>
 </body>
 </html>
