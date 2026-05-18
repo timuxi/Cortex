@@ -9,8 +9,8 @@ pyarrow
 nvitop
 pandas
 scikit-learn
-project_llm_model==0.9.11
-project_llm_trainer==0.17.3
+project_llm_model==0.10.0
+project_llm_trainer==0.18.0
 plotly
 bottle
 paste
