@@ -6,7 +6,6 @@ import torch
 
 os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 
-# 引入 OpenAI SDK
 from openai import OpenAI
 
 from llm_trainer import PPOTrainer, TrainerTools
@@ -38,7 +37,6 @@ def call_llm_judge(prompt: str, answer: str, is_think_required: bool) -> float:
         .replace("<answer>", "[回答开始]") \
         .replace("</answer>", "[回答结束]")
 
-    # 极简判定人设，绝对禁止废话
     base_prompt = """你是一个冷酷客观的 AI 打分机器。你需要评估一个极小AI模型的输出格式与逻辑。
 请【完全忽略】事实准确性！只看格式、排版和语言连贯性。
 你可以先用一两句话简评，但【文章最后必须且只能】输出一个严格的 XML 标签：<score>得分</score>。范围是 -5.0 到 5.0。"""
@@ -74,13 +72,11 @@ def call_llm_judge(prompt: str, answer: str, is_think_required: bool) -> float:
         )
         content = response.choices[0].message.content.strip()
 
-        # 稍微宽松一点的正则，防止模型忘写标签但写了数字
         match = re.search(r'<score>([\-\d\.]+)</score>', content)
         if match:
             score = float(match.group(1))
             return max(min(score, 5.0), -5.0)
         else:
-            # 兜底：如果它真的连标签都不写，只输出了数字，比如 "4.5"
             fallback_match = re.search(r'^\s*([\-\d\.]+)\s*$', content)
             if fallback_match:
                 score = float(fallback_match.group(1))
@@ -92,15 +88,11 @@ def call_llm_judge(prompt: str, answer: str, is_think_required: bool) -> float:
     except Exception as e:
         error_msg = str(e)
 
-        # 【安全机制】：如果触发了智谱 1301 敏感内容审核
         if "1301" in error_msg or "contentFilter" in error_msg:
-            # 不要打印长长的报错刷屏，直接给模型 -2.0 分的惩罚！
-            # 教会模型：说敏感词会扣分！
             return -2.0
 
         print(f"[LLM Judge API 错误]: {error_msg}")
 
-        # 熔断机制：遇到限流或欠费直接退出
         if "余额不足" in error_msg or "429" in error_msg or "1113" in error_msg:
             print("🚨 致命错误：API 余额不足或被限流！强行终止！")
             import os
@@ -131,12 +123,10 @@ def reward_func(
     rm_indices = []
     log_details = {}
 
-    # ---------------- 分数参数设置 (已全面调优) ----------------
     SCORE_EOS_PENALTY = -1.0
     SCORE_FORMAT_PENALTY = -1.5
     SCORE_RULE_PENALTY = -1.5
     RM_WEIGHT = 1.0
-    # -----------------------------------------------------------
 
     debug_scores = {
         "eos_score": 0.0,
@@ -147,15 +137,12 @@ def reward_func(
     }
 
     for idx, (prompt, completion) in enumerate(zip(prompts_text, completions_text)):
-        # 1. 预处理与鲁棒的 EOS 判断
         completion_clean = completion.replace("<pad>", "").strip()
         has_eos = completion_clean.endswith('</s>')
 
-        # 判断 prompt 请求类型
         is_no_think = bool(re.search(r'/no think\s*$', prompt))
         is_think = bool(re.search(r'/think\s*$', prompt))
 
-        # 【新增】双模态 Length Bonus 与 防早退硬底线
         ans_len = len(completion_clean)
         length_bonus = 0.0
         format_score = 0.0
@@ -166,19 +153,18 @@ def reward_func(
 
         if is_think:
             if ans_len < 80:
-                format_score -= 2.0  # 硬底线：要求思考却敷衍，重罚
+                format_score -= 2.0
             else:
-                length_bonus = min(ans_len / 400.0, 1.5)  # 满分 1.5
+                length_bonus = min(ans_len / 400.0, 1.5)
         else:
             if ans_len < 20:
-                format_score -= 2.0  # 硬底线：直答也不能只写一两个字
+                format_score -= 2.0
             else:
-                length_bonus = min(ans_len / 200.0, 1.0)  # 满分 1.0
+                length_bonus = min(ans_len / 200.0, 1.0)
 
         think_content = ""
         answer_content = ""
 
-        # 3. 严格的格式校验
         if completion_clean.count('<think>') != 1 or completion_clean.count('</think>') != 1 or \
                 completion_clean.count('<answer>') != 1 or completion_clean.count('</answer>') != 1:
 
@@ -195,19 +181,16 @@ def reward_func(
                 think_content = think_match.group(1).strip()
                 answer_content = answer_match.group(1).strip()
 
-                # 检查标签闭合顺序
                 idx_think_end = completion_clean.find('</think>')
                 idx_answer_start = completion_clean.find('<answer>')
                 if idx_think_end > idx_answer_start:
                     format_score += SCORE_FORMAT_PENALTY
                     is_format_fatal = True
 
-                # 检查回答内容是否为空
                 if len(answer_content) == 0:
                     format_score += SCORE_FORMAT_PENALTY
                     is_format_fatal = True
 
-                # 检查指令遵循情况 (硬约束)
                 if is_no_think and len(think_content) > 0:
                     format_score += SCORE_RULE_PENALTY
                     is_format_fatal = True
@@ -215,26 +198,15 @@ def reward_func(
                     format_score += SCORE_RULE_PENALTY
                     is_format_fatal = True
 
-                # 【新增】身份认知的硬性拦截
-                if "你是谁" in prompt or "你叫什么" in prompt:
-                    if "QB" in answer_content or "Cortex" in answer_content:
-                        format_score += 3.0  # 记住名字，大赏！
-                    else:
-                        format_score -= 2.0  # 乱编名字，扣分！
-
-        # 结算当前总分
         current_score = format_score + length_bonus
         total_scores[idx] = current_score
 
-        # 4. 准备 RM 的输入
         clean_prompt = replace_spec_tokens(prompt)
         clean_prompt = re.sub(r'/no think\s*$', '', clean_prompt)
         clean_prompt = re.sub(r'/think\s*$', '', clean_prompt).strip()
 
-        # 【关键】：保留带有完整 <think> 过程的回答，交给大模型裁判审查逻辑
         clean_answer_for_rm = completion_clean
 
-        # 把 is_think 一起传给多线程队列
         rm_inputs_text.append((clean_prompt, clean_answer_for_rm, is_think))
         rm_indices.append((idx, is_format_fatal))
 
@@ -252,12 +224,9 @@ def reward_func(
                 "is_format_fatal": is_format_fatal
             }
 
-    # 5. 计算 RM 分数 (多线程调用 API)
     if len(rm_inputs_text) > 0:
-        # 如果使用免费 API 有 QPS 限制，max_workers 建议保持为 2 到 4
         with concurrent.futures.ThreadPoolExecutor(max_workers=min(1, batch_size)) as executor:
             future_to_idx = {
-                # 传入 is_think_req 参数
                 executor.submit(call_llm_judge, p, a, is_think_req): i
                 for i, (p, a, is_think_req) in enumerate(rm_inputs_text)
             }
@@ -286,7 +255,6 @@ def reward_func(
     if log_details:
         log_details["final_total"] = total_scores[0]
 
-    # 6. 写日志
     if TrainerTools().parallel.is_main_process and log_details:
         with open('./log/reward.txt', 'a', encoding='utf-8') as f:
             f.write("-" * 65 + "\n")
