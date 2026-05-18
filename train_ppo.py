@@ -276,18 +276,6 @@ def reward_func(
     return total_scores
 
 
-def ptx(prompt: List[torch.Tensor], answer: List[torch.Tensor]) -> List[torch.Tensor]:
-    rst = []
-    for p, a in zip(prompt, answer):
-        ptx_data = torch.concat([p, a])
-        rst.append(ptx_data)
-
-        if TrainerTools().parallel.is_main_process:
-            print(TrainerTools().tokenizer.decode(ptx_data))
-
-    return rst
-
-
 if __name__ == '__main__':
     eval_prompts = [
         get_eval_prompt('写一篇介绍太阳系行星的科普文章'),
@@ -303,7 +291,6 @@ if __name__ == '__main__':
         train_config=get_ppo_config(),
         reward_func=reward_func,
         eval_prompts=eval_prompts,
-        # ptx_builder=ptx,
     )
 
     trainer.train()
