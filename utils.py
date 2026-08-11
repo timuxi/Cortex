@@ -1,3 +1,4 @@
+import os
 import random
 
 import torch
@@ -14,12 +15,12 @@ def init_env():
     os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-    os.environ['TOKEN_DIR'] = './tokenizer'
+    os.environ['TOKEN_DIR'] = './tokens/'
     os.environ['LOG_DIR'] = './log/'
 
     os.environ['CHECKPOINT_DIR'] = 'ckpt_dir'
     os.environ['CKPT_MAX_TO_KEEP'] = '2'
-    os.environ['SAVE_BEST_CHECKPOINT'] = '0'  # or '1'
+    os.environ['SAVE_BEST_CHECKPOINT'] = '0'
 
 
 def get_eval_prompt(content: str) -> str:

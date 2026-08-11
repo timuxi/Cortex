@@ -78,11 +78,7 @@ if not os.path.exists(f'{model_dir}{model_name}'):
 app = Bottle()
 init_env()
 
-device = "cpu"
-if torch.cuda.is_available():
-    device = "cuda"
-elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-    device = "mps"
+device = TrainerTools().parallel.device
 
 
 model = LlmModel(get_model_config(long_context=True)).to(device=device)
