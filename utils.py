@@ -57,18 +57,7 @@ def get_model_config(long_context=False):
         use_qk_norm=True,
         attention_implementation='sdpa',
 
-        moe_config=MoEConfig(
-            n_dense_layer=1,
-            intermediate_size=512,
-            n_routed_experts=8,
-            num_experts_per_tok=2,
-            n_shared_experts=2,
-            norm_topk_prob=True,
-            seq_aux=True,
-            routed_scaling_factor=1.0,
-            aux_loss_coef=1e-3,
-            z_loss_coef=1e-4,
-        ),
+        moe_config=None,
 
         attn_res_config=AttnResConfig(
             num_blocks=2
@@ -336,7 +325,7 @@ def _get_train_config(
 def get_pretrain_config():
     return _get_train_config(
         n_epochs=1,
-        real_batch_size=50,
+        real_batch_size=64,
         file_dataset=PretrainFileDataset(),
         model_config=get_model_config(long_context=False),
         train_stage='pretrain'
@@ -391,3 +380,17 @@ def get_grpo_config():
         model_config=get_model_config(long_context=True),
         train_stage='grpo'
     )
+
+
+def apply_profile_config(train_config, profile_steps: int):
+    """
+    性能采集模式（配合外层 msprof --output=./prof）：
+    - 强制 gradient_accumulation_steps=1，使 1 个 optimizer step 正好 = 1 个 batch（64 样本）的前向+反向。
+    - 限制最多执行 profile_steps 个 optimizer step（默认 10：前 8 步 warmup，用第 9、10 步估 MFU）。
+    """
+    for cfg in (train_config.pretrain_config, train_config.sft_config, train_config.dpo_config):
+        if cfg is not None:
+            cfg.gradient_accumulation_steps = 1
+
+    train_config.max_steps = profile_steps
+    return train_config

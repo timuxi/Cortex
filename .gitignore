@@ -2,4 +2,6 @@ __pycache__/*
 data/*
 ckpt_dir/*
 log/*
+prof/*
+export_only_prof_dir/*
 train_output.log
