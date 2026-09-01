@@ -5,3 +5,6 @@ log/*
 prof/*
 export_only_prof_dir/*
 train_output.log
+eval_pretrain_out/details.jsonl
+eval_pretrain_out/metrics.json
+last_checkpoint.bin
