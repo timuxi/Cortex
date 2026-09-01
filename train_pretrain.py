@@ -1,3 +1,4 @@
+import os
 import time
 import argparse
 
@@ -25,9 +26,8 @@ def _detect_peak_flops_tflops() -> float:
         return 295.0
     elif '910b4' in name_l:
         return 270
-    
-    return 270
 
+    return 270
 
 
 def _compute_mfu(num_params: int, tokens: int, elapsed_s: float, peak_tflops: float) -> float:
@@ -35,6 +35,33 @@ def _compute_mfu(num_params: int, tokens: int, elapsed_s: float, peak_tflops: fl
     if elapsed_s <= 0:
         return 0.0
     return 6 * num_params * tokens / (peak_tflops * 1e12 * elapsed_s)
+
+
+def _reset_peak_memory():
+    """重置当前设备的峰值显存统计（不含历史峰值）。"""
+    import torch
+    if hasattr(torch, 'npu') and torch.npu.is_available():
+        torch.npu.reset_peak_memory_stats()
+    elif torch.cuda.is_available():
+        torch.cuda.reset_peak_memory_stats()
+
+
+def _read_peak_memory_gib():
+    """返回 (allocated_gib, reserved_gib, device_tag)。"""
+    import torch
+    if hasattr(torch, 'npu') and torch.npu.is_available():
+        return (
+            torch.npu.max_memory_allocated() / 1024 ** 3,
+            torch.npu.max_memory_reserved() / 1024 ** 3,
+            f'npu:{torch.npu.current_device()}',
+        )
+    if torch.cuda.is_available():
+        return (
+            torch.cuda.max_memory_allocated() / 1024 ** 3,
+            torch.cuda.max_memory_reserved() / 1024 ** 3,
+            f'cuda:{torch.cuda.current_device()}',
+        )
+    return 0.0, 0.0, 'cpu'
 
 
 class _MfuTimer:
@@ -79,9 +106,17 @@ if __name__ == '__main__':
         tokens_per_step = train_config.batch_size * train_config.dataset_block_size
         peak_tflops = args.peak_flops if args.peak_flops > 0 else _detect_peak_flops_tflops()
 
+        # 模型已加载后再清峰值，统计训练阶段（含已驻留的权重）最高水位
+        _reset_peak_memory()
+
         timer = _MfuTimer()
         trainer.on_step = timer
         trainer.train()
+
+        alloc_gib, reserved_gib, device_tag = _read_peak_memory_gib()
+        rank = os.environ.get('RANK', '0')
+        print(f'[MEM] rank={rank} device={device_tag} '
+              f'peak_allocated={alloc_gib:.2f} GiB peak_reserved={reserved_gib:.2f} GiB')
 
         if timer.step_times:
             # 仅用最后 2 个 step 间隔估算 MFU（对应第 9、10 步）

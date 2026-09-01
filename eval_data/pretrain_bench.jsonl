@@ -1,0 +1,53 @@
+{"id": "cs_zh_01", "type": "commonsense", "query": "地球上面积最大的大洋是", "choices": ["太平洋", "大西洋", "印度洋", "北冰洋"], "answer": 0}
+{"id": "cs_zh_02", "type": "commonsense", "query": "一年有多少个月？答案是", "choices": ["十二个月", "十个月", "八个月", "六个月"], "answer": 0}
+{"id": "cs_zh_03", "type": "commonsense", "query": "中国的首都是", "choices": ["北京", "上海", "广州", "深圳"], "answer": 0}
+{"id": "cs_zh_04", "type": "commonsense", "query": "太阳从哪个方向升起？答案是", "choices": ["东方", "西方", "南方", "北方"], "answer": 0}
+{"id": "cs_zh_05", "type": "commonsense", "query": "水在标准大气压下的沸点大约是", "choices": ["100摄氏度", "0摄氏度", "50摄氏度", "200摄氏度"], "answer": 0}
+{"id": "cs_zh_06", "type": "commonsense", "query": "人体心跳主要由哪个器官完成？答案是", "choices": ["心脏", "肝脏", "肺", "胃"], "answer": 0}
+{"id": "cs_zh_07", "type": "commonsense", "query": "一周有多少天？答案是", "choices": ["七天", "五天", "十天", "三天"], "answer": 0}
+{"id": "cs_zh_08", "type": "commonsense", "query": "世界上人口最多的国家是", "choices": ["印度", "美国", "俄罗斯", "日本"], "answer": 0}
+{"id": "cs_zh_09", "type": "commonsense", "query": "计算机中CPU的中文名称是", "choices": ["中央处理器", "显示器", "键盘", "音箱"], "answer": 0}
+{"id": "cs_zh_10", "type": "commonsense", "query": "光合作用主要发生在植物的", "choices": ["叶片", "根部", "花朵", "果实"], "answer": 0}
+{"id": "cs_zh_11", "type": "commonsense", "query": "月球绕着哪个天体转？答案是", "choices": ["地球", "太阳", "火星", "金星"], "answer": 0}
+{"id": "cs_zh_12", "type": "commonsense", "query": "汉字“山”通常指的是", "choices": ["山脉", "河流", "海洋", "沙漠"], "answer": 0}
+{"id": "cs_zh_13", "type": "commonsense", "query": "一天有多少小时？答案是", "choices": ["二十四小时", "十二小时", "四十八小时", "十小时"], "answer": 0}
+{"id": "cs_zh_14", "type": "commonsense", "query": "熊猫主要以什么为食？答案是", "choices": ["竹子", "鱼", "肉", "草籽"], "answer": 0}
+{"id": "cs_zh_15", "type": "commonsense", "query": "黄河流经的国家是", "choices": ["中国", "日本", "韩国", "越南"], "answer": 0}
+{"id": "cs_zh_16", "type": "commonsense", "query": "冰融化后会变成", "choices": ["水", "火", "土", "风"], "answer": 0}
+{"id": "cs_zh_17", "type": "commonsense", "query": "人用哪个器官呼吸？答案是", "choices": ["肺", "胃", "肾", "脾"], "answer": 0}
+{"id": "cs_zh_18", "type": "commonsense", "query": "春天之后是", "choices": ["夏天", "秋天", "冬天", "雨季"], "answer": 0}
+{"id": "cs_zh_19", "type": "commonsense", "query": "汽车通常用什么燃料？答案是", "choices": ["汽油", "清水", "沙子", "木头"], "answer": 0}
+{"id": "cs_zh_20", "type": "commonsense", "query": "书是用来", "choices": ["阅读的", "吃的", "穿的", "骑的"], "answer": 0}
+{"id": "cloze_zh_01", "type": "cloze", "query": "床前明月光，疑是地上", "choices": ["霜", "霜花", "雪", "雾"], "answer": 0}
+{"id": "cloze_zh_02", "type": "cloze", "query": "春眠不觉晓，处处闻啼", "choices": ["鸟", "虫", "人", "雨"], "answer": 0}
+{"id": "cloze_zh_03", "type": "cloze", "query": "欲穷千里目，更上一层", "choices": ["楼", "山", "塔", "阶"], "answer": 0}
+{"id": "cloze_zh_04", "type": "cloze", "query": "谁知盘中餐，粒粒皆辛", "choices": ["苦", "酸", "辣", "甜"], "answer": 0}
+{"id": "cloze_zh_05", "type": "cloze", "query": "野火烧不尽，春风吹又", "choices": ["生", "绿", "来", "长"], "answer": 0}
+{"id": "cloze_zh_06", "type": "cloze", "query": "不识庐山真面目，只缘身在此山", "choices": ["中", "上", "下", "间"], "answer": 0}
+{"id": "cloze_zh_07", "type": "cloze", "query": "海内存知己，天涯若比", "choices": ["邻", "亲", "友", "肩"], "answer": 0}
+{"id": "cloze_zh_08", "type": "cloze", "query": "落红不是无情物，化作春泥更护", "choices": ["花", "草", "树", "叶"], "answer": 0}
+{"id": "cloze_zh_09", "type": "cloze", "query": "纸上得来终觉浅，绝知此事要躬", "choices": ["行", "做", "学", "问"], "answer": 0}
+{"id": "cloze_zh_10", "type": "cloze", "query": "问君能有几多愁，恰似一江春水向东", "choices": ["流", "去", "涌", "淌"], "answer": 0}
+{"id": "comp_zh_01", "type": "completion", "query": "1加1等于", "choices": ["2", "3", "0", "11"], "answer": 0}
+{"id": "comp_zh_02", "type": "completion", "query": "红灯表示", "choices": ["停止", "通行", "加速", "倒车"], "answer": 0}
+{"id": "comp_zh_03", "type": "completion", "query": "医生的工作场所通常是", "choices": ["医院", "厨房", "球场", "剧院"], "answer": 0}
+{"id": "comp_zh_04", "type": "completion", "query": "下雨时人们常会打", "choices": ["伞", "球", "针", "字"], "answer": 0}
+{"id": "comp_zh_05", "type": "completion", "query": "老虎是一种", "choices": ["动物", "植物", "矿物", "车辆"], "answer": 0}
+{"id": "comp_zh_06", "type": "completion", "query": "手机可以用来", "choices": ["打电话", "做饭", "耕地", "游泳"], "answer": 0}
+{"id": "comp_zh_07", "type": "completion", "query": "冬天天气通常比较", "choices": ["冷", "热", "闷", "潮热"], "answer": 0}
+{"id": "comp_zh_08", "type": "completion", "query": "鱼生活在", "choices": ["水里", "天上", "树上", "沙漠里"], "answer": 0}
+{"id": "comp_zh_09", "type": "completion", "query": "眼睛的主要功能是", "choices": ["看东西", "听声音", "闻气味", "走路"], "answer": 0}
+{"id": "comp_zh_10", "type": "completion", "query": "火车行驶在", "choices": ["铁轨上", "水面上", "云层里", "管道中"], "answer": 0}
+{"id": "cs_en_01", "type": "commonsense", "query": "The capital of France is", "choices": ["Paris", "London", "Berlin", "Rome"], "answer": 0}
+{"id": "cs_en_02", "type": "commonsense", "query": "Water freezes at", "choices": ["0 degrees Celsius", "100 degrees Celsius", "50 degrees Celsius", "25 degrees Celsius"], "answer": 0}
+{"id": "cs_en_03", "type": "commonsense", "query": "There are seven days in a", "choices": ["week", "month", "year", "hour"], "answer": 0}
+{"id": "cs_en_04", "type": "commonsense", "query": "The sun rises in the", "choices": ["east", "west", "north", "south"], "answer": 0}
+{"id": "cs_en_05", "type": "commonsense", "query": "A banana is a kind of", "choices": ["fruit", "metal", "animal", "vehicle"], "answer": 0}
+{"id": "cs_en_06", "type": "commonsense", "query": "People use their ears to", "choices": ["hear", "see", "smell", "taste"], "answer": 0}
+{"id": "cs_en_07", "type": "commonsense", "query": "Ice is made of frozen", "choices": ["water", "oil", "sand", "air"], "answer": 0}
+{"id": "cs_en_08", "type": "commonsense", "query": "Birds usually have", "choices": ["wings", "fins", "wheels", "roots"], "answer": 0}
+{"id": "cloze_en_01", "type": "cloze", "query": "An apple a day keeps the doctor", "choices": ["away", "near", "busy", "angry"], "answer": 0}
+{"id": "cloze_en_02", "type": "cloze", "query": "The opposite of hot is", "choices": ["cold", "warm", "big", "fast"], "answer": 0}
+{"id": "cloze_en_03", "type": "cloze", "query": "2 plus 2 equals", "choices": ["4", "5", "22", "0"], "answer": 0}
+{"id": "cloze_en_04", "type": "cloze", "query": "Cats like to drink", "choices": ["milk", "gasoline", "sand", "rocks"], "answer": 0}
+{"id": "cloze_en_05", "type": "cloze", "query": "We write with a", "choices": ["pen", "shoe", "chair", "cloud"], "answer": 0}

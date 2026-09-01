@@ -100,6 +100,7 @@
 ```
 # 1. 开始训练
 smart_train train_pretrain.py
+# 或: NPU=0,1,2,3 ./run_pretrain.sh
 
 # 2. 转换权重 (训练完成后执行)
 cd ./ckpt_dir
@@ -107,7 +108,13 @@ python3 zero_to_fp32.py ./ ../
 cd ..
 mv pytorch_model.bin last_checkpoint.bin
 
-# 3. 清理
+# 3. 预训练测评（常识/补全准确率，似然排序）
+./run_eval_pretrain.sh
+# 或: python3 eval_pretrain.py --ckpt ./last_checkpoint.bin
+# 题库: ./eval_data/pretrain_bench.jsonl
+# 结果: ./eval_pretrain_out/metrics.json 、 details.jsonl
+
+# 4. 清理（确认评测无误后再清）
 rm -rf ./ckpt_dir ./log
 
 ```

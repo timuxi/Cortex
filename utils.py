@@ -305,7 +305,10 @@ def _get_train_config(
         model_config=model_config,
         file_dataset=file_dataset,
         dataset_block_size=model_config.max_position_embeddings,
-        loss_config=train_configs.LossConfig(),
+        loss_config=train_configs.LossConfig(
+            # 分块 linear+CE，避免物化 [B,S,V]；峰值约 chunk_size×V（2048×32k×2≈128MiB）
+            chunk_size=2048,
+        ),
         optim_config=optim_config,
         ds_config=ds_config,
         data_loader_config=data_loader_config,
@@ -325,7 +328,7 @@ def _get_train_config(
 def get_pretrain_config():
     return _get_train_config(
         n_epochs=1,
-        real_batch_size=64,
+        real_batch_size=384,
         file_dataset=PretrainFileDataset(),
         model_config=get_model_config(long_context=False),
         train_stage='pretrain'
