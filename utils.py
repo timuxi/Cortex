@@ -13,7 +13,12 @@ ENABLE_ATTN_RES = False
 
 def init_env():
     os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
+    # NPU 缓存分配：减少碎片（若已设置则尊重用户环境变量）
+    os.environ.setdefault('PYTORCH_NPU_ALLOC_CONF', 'expandable_segments:True')
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+    # HCCL：默认 200MB 偏小；过大又占显存（每通信域约 2*BUFFSIZE）。512MB 在带宽与显存间折中。
+    os.environ.setdefault('HCCL_BUFFSIZE', '512')
 
     os.environ['TOKEN_DIR'] = './tokens/'
     os.environ['LOG_DIR'] = './log/'
@@ -36,22 +41,19 @@ def get_eval_prompt(content: str) -> str:
 
 
 def get_model_config(long_context=False):
-    # max_position_embeddings: 512 -> 2048
-    max_position_embeddings = 2048 if long_context else 512
-    original_max_position_embeddings = 512 if long_context else None
     rope_type = 'yarn' if long_context else 'default'
 
     return ModelConfig(
         vocab_size=TrainerTools().tokenizer.vocab_size,
-        hidden_size=768,
-        intermediate_size=2048,
+        hidden_size=4096,
+        intermediate_size=12288,
 
-        num_hidden_layers=8,
-        num_attention_heads=12,
-        num_key_value_heads=4,
+        num_hidden_layers=36,
+        num_attention_heads=32,
+        num_key_value_heads=8,
 
-        max_position_embeddings=max_position_embeddings,
-        original_max_position_embeddings=original_max_position_embeddings,
+        max_position_embeddings=4096,
+        original_max_position_embeddings=4096,
         attention_dropout=0.0,
         tie_word_embeddings=True,
         use_qk_norm=True,
@@ -65,7 +67,7 @@ def get_model_config(long_context=False):
 
         rope_config=RoPEConfig(
             rope_type=rope_type,
-            rope_theta=10000.0,
+            rope_theta=1e6,
         ),
     )
 
@@ -113,7 +115,14 @@ def _get_train_config(
         assert ref_checkpoint is not None
 
     ds_config = train_configs.DsConfig(
-        zero_config=train_configs.DsZero1Config(),
+        zero_config=train_configs.DsZero2Config(
+            # HCCL_BUFFSIZE 已提到 512MB；bucket 保持 500MB，避免再堆大块临时缓冲导致 OOM
+            reduce_bucket_size=5e8,
+            allgather_bucket_size=5e8,
+            overlap_comm=True,
+            reduce_scatter=True,
+            contiguous_gradients=True,
+        ),
         activation_checkpointing=train_configs.DsActivationCheckpointingConfig(
             cpu_checkpointing=True
         ) if ENABLE_ATTN_RES else None
@@ -328,7 +337,7 @@ def _get_train_config(
 def get_pretrain_config():
     return _get_train_config(
         n_epochs=1,
-        real_batch_size=384,
+        real_batch_size=1,
         file_dataset=PretrainFileDataset(),
         model_config=get_model_config(long_context=False),
         train_stage='pretrain'
@@ -387,9 +396,10 @@ def get_grpo_config():
 
 def apply_profile_config(train_config, profile_steps: int):
     """
-    性能采集模式（配合外层 msprof --output=./prof）：
-    - 强制 gradient_accumulation_steps=1，使 1 个 optimizer step 正好 = 1 个 batch（64 样本）的前向+反向。
-    - 限制最多执行 profile_steps 个 optimizer step（默认 10：前 8 步 warmup，用第 9、10 步估 MFU）。
+    性能采集模式（配合 train_pretrain 内 torch_npu.profiler schedule）：
+    - 强制 gradient_accumulation_steps=1，使 1 个 optimizer step 正好 = 1 个 batch 的前向+反向。
+    - 限制最多执行 profile_steps 个 optimizer step（默认 10：前 8 步 skip，采第 9、10 步估 MFU）。
+    - Profiler 在 Trainer/模型初始化完成之后才开启，不包含冷启动。
     """
     for cfg in (train_config.pretrain_config, train_config.sft_config, train_config.dpo_config):
         if cfg is not None:

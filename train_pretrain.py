@@ -65,7 +65,7 @@ def _read_peak_memory_gib():
 
 
 class _MfuTimer:
-    """记录每个 optimizer step 耗时（整网采集由外层 msprof 负责）。"""
+    """记录每个 optimizer step 耗时。"""
 
     def __init__(self):
         self.step_times = []
@@ -78,10 +78,59 @@ class _MfuTimer:
         self._last = now
 
 
+class _ProfileStepHook:
+    """optimizer step 回调：MFU 计时 + torch_npu.profiler.step()。"""
+
+    def __init__(self, timer: _MfuTimer, profiler=None):
+        self.timer = timer
+        self.profiler = profiler
+
+    def __call__(self):
+        self.timer()
+        if self.profiler is not None:
+            self.profiler.step()
+
+
+def _make_npu_profiler(prof_dir: str, skip_first: int, active: int):
+    """模型 ready 后再创建；schedule 跳过前 skip_first 步，只录 active 步。"""
+    from torch_npu.profiler import (
+        profile,
+        schedule,
+        ProfilerActivity,
+        tensorboard_trace_handler,
+        _ExperimentalConfig,
+        ProfilerLevel,
+        AiCMetrics,
+    )
+
+    os.makedirs(prof_dir, exist_ok=True)
+    return profile(
+        activities=[ProfilerActivity.CPU, ProfilerActivity.NPU],
+        schedule=schedule(
+            wait=0,
+            warmup=0,
+            active=active,
+            repeat=1,
+            skip_first=skip_first,
+        ),
+        on_trace_ready=tensorboard_trace_handler(prof_dir),
+        experimental_config=_ExperimentalConfig(
+            profiler_level=ProfilerLevel.Level1,
+            aic_metrics=AiCMetrics.PipeUtilization,
+        ),
+    )
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Cortex pretrain / 整网性能采集')
     parser.add_argument('--profile-steps', type=int, default=0,
-                        help='性能采集总步数（>0 开启；默认 10：前 8 步 warmup，用第 9、10 步估 MFU；msprof 覆盖整段）')
+                        help='性能采集总步数（>0 开启；默认 10：前 8 步 skip，采第 9、10 步；torch_npu.profiler）')
+    parser.add_argument('--prof-dir', type=str, default='./prof',
+                        help='torch_npu.profiler 输出目录（仅 --profile-steps>0 时生效）')
+    parser.add_argument('--prof-skip-first', type=int, default=8,
+                        help='profiler schedule：跳过前 N 个 optimizer step（不含冷启动）')
+    parser.add_argument('--prof-active', type=int, default=2,
+                        help='profiler schedule：实际采集的 step 数')
     parser.add_argument('--peak-flops', type=float, default=0.0,
                         help='NPU 峰值算力（TFLOPS），0 表示按设备型号自动检测')
     args = parser.parse_args()
@@ -96,9 +145,13 @@ if __name__ == '__main__':
     profile_steps = args.profile_steps if args.profile_steps > 0 else 0
 
     if profile_steps:
-        # 强制 grad_accum=1（1 步 = 1 个 64 batch）+ 限步数
+        # 强制 grad_accum=1 + 限步数；步数至少覆盖 skip+active
+        need_steps = args.prof_skip_first + args.prof_active
+        if profile_steps < need_steps:
+            profile_steps = need_steps
         apply_profile_config(train_config, profile_steps)
 
+    # 冷启动（建模 / DeepSpeed）在此完成，profiler 尚未开启
     trainer = Trainer(train_config=train_config, eval_prompts=eval_prompts)
 
     if profile_steps:
@@ -110,17 +163,23 @@ if __name__ == '__main__':
         _reset_peak_memory()
 
         timer = _MfuTimer()
-        trainer.on_step = timer
-        trainer.train()
+        rank = os.environ.get('RANK', '0')
+        print(f'[PROF] rank={rank} dir={args.prof_dir} '
+              f'skip_first={args.prof_skip_first} active={args.prof_active} '
+              f'total_steps={profile_steps}（不含 Trainer 初始化冷启动）')
+
+        with _make_npu_profiler(args.prof_dir, args.prof_skip_first, args.prof_active) as prof:
+            trainer.on_step = _ProfileStepHook(timer, prof)
+            trainer.train()
 
         alloc_gib, reserved_gib, device_tag = _read_peak_memory_gib()
-        rank = os.environ.get('RANK', '0')
         print(f'[MEM] rank={rank} device={device_tag} '
               f'peak_allocated={alloc_gib:.2f} GiB peak_reserved={reserved_gib:.2f} GiB')
 
         if timer.step_times:
-            # 仅用最后 2 个 step 间隔估算 MFU（对应第 9、10 步）
-            active_times = timer.step_times[-2:] if len(timer.step_times) >= 2 else timer.step_times
+            # 仅用最后 active 个 step 间隔估算 MFU
+            n_active = max(1, args.prof_active)
+            active_times = timer.step_times[-n_active:] if len(timer.step_times) >= n_active else timer.step_times
             avg_step_s = sum(active_times) / len(active_times)
             achieved_tflops = 6 * num_params * tokens_per_step / (avg_step_s * 1e12) if avg_step_s > 0 else 0.0
             mfu = _compute_mfu(num_params, tokens_per_step, avg_step_s, peak_tflops)

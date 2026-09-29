@@ -8,7 +8,7 @@
 #   NPU=0,1 ./run_pretrain.sh      # NPU 多卡 (2卡)
 #   NPU=0,1,2,3 ./run_pretrain.sh  # NPU 多卡 (4卡)
 #   NPROC=4 ./run_pretrain.sh      # 4卡并行 + 自动检测可用卡
-#   NPU=0,1,2,3 ./run_pretrain.sh --prof   # 整网性能采集：前 8 步 warmup，采第 9、10 步；结果在 ./prof
+#   NPU=0,1,2,3 ./run_pretrain.sh --prof   # 性能采集：模型 ready 后 torch_npu.profiler；前 8 步 skip，采第 9、10 步；结果在 ./prof
 #
 clear
 set -e
@@ -74,11 +74,15 @@ echo "$DEVICE"
 
 # ---- 3. 清理 ----
 rm -f log/*.lock 2>/dev/null || true
-# 旧版 torch_npu.profiler 残留目录，避免干扰本次采集
+# 旧版 torch_npu.profiler / msprof 残留目录，避免干扰本次采集
 rm -rf export_only_prof_dir result_dir 2>/dev/null || true
 if [ "$ENABLE_PROF" -eq 1 ]; then
     rm -rf ./prof 2>/dev/null || true
 fi
+
+export PYTHONUNBUFFERED=1
+export HCCL_BUFFSIZE="${HCCL_BUFFSIZE:-1024}"
+export PYTORCH_NPU_ALLOC_CONF="${PYTORCH_NPU_ALLOC_CONF:-expandable_segments:True}"
 
 # ---- 4. 启动 ----
 echo ""
@@ -86,11 +90,12 @@ echo "启动时间: $(date)"
 echo "并行模式: ${NPROC} 卡"
 if [ "$NPROC" -gt 1 ]; then
     echo "可见设备: ${ASCEND_RT_VISIBLE_DEVICES:-auto}"
+    echo "HCCL_BUFFSIZE: ${HCCL_BUFFSIZE} MB"
 fi
 echo "日志:     log/log.txt"
 echo "模型:     ckpt_dir/model.pth"
 if [ "$ENABLE_PROF" -eq 1 ]; then
-    echo "性能采集: 开启（前 8 步 warmup，采第 9、10 步）"
+    echo "性能采集: torch_npu.profiler（模型 ready 后开启；前 8 步 skip，采第 9、10 步）"
     echo "prof 输出: ./prof"
 fi
 echo "----------------------------------------"
@@ -98,9 +103,7 @@ echo "按 Ctrl+C 中断"
 echo "========================================"
 echo ""
 
-export PYTHONUNBUFFERED=1
-
-# 性能采集：共 10 个 optimizer step，前 8 步 warmup，第 9、10 步出结果
+# 性能采集：共 10 个 optimizer step；schedule skip_first=8, active=2（不含建模/DeepSpeed 冷启动）
 PROF_STEPS=10
 PROF_DIR=./prof
 
@@ -111,16 +114,15 @@ if [ "$ENABLE_PROF" -eq 1 ]; then
         PEAK_FLOP_ARGS="--peak-flops ${PEAK_FLOPS}"
     fi
 
-    # 本机 msprof 要求 --output=DIR（等号），空格形式会报 expected one argument
     if [ "$NPROC" -gt 1 ]; then
         export PARALLEL_TYPE=ds
-        msprof --output="$PROF_DIR" \
-            torchrun --nproc_per_node="$NPROC" --master_port="${MASTER_PORT:-29500}" \
-            train_pretrain.py --profile-steps "${PROF_STEPS}" ${PEAK_FLOP_ARGS} \
+        torchrun --nproc_per_node="$NPROC" --master_port="${MASTER_PORT:-29500}" \
+            train_pretrain.py --profile-steps "${PROF_STEPS}" --prof-dir "${PROF_DIR}" \
+            ${PEAK_FLOP_ARGS} \
             2>&1 | tee train_output.log
     else
-        msprof --output="$PROF_DIR" \
-            python3 -u train_pretrain.py --profile-steps "${PROF_STEPS}" ${PEAK_FLOP_ARGS} \
+        python3 -u train_pretrain.py --profile-steps "${PROF_STEPS}" --prof-dir "${PROF_DIR}" \
+            ${PEAK_FLOP_ARGS} \
             2>&1 | tee train_output.log
     fi
 elif [ "$NPROC" -gt 1 ]; then
